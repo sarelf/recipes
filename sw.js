@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v10';
+const CACHE_VERSION = 'v11';
 const STATIC_CACHE = `recipes-static-${CACHE_VERSION}`;
 const DATA_CACHE = `recipes-data-${CACHE_VERSION}`;
 const IMAGES_CACHE = `recipes-images-${CACHE_VERSION}`;
@@ -23,7 +23,14 @@ const STATIC_ASSETS = [
     BASE + 'marked.min.js',
     BASE + 'manifest.json',
     BASE + 'icons/icon-192x192.png',
-    BASE + 'icons/icon-512x512.png'
+    BASE + 'icons/icon-512x512.png',
+    BASE + 'images/cat_salads.jpg',
+    BASE + 'images/cat_cakes.jpg',
+    BASE + 'images/ai_fish_dish.jpg',
+    BASE + 'images/cat_breads.jpg',
+    BASE + 'images/cat_mains.jpg',
+    BASE + 'images/cat_snacks.jpg',
+    BASE + 'images/cat_all.jpg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -120,10 +127,11 @@ self.addEventListener('fetch', (event) => {
 
             try {
                 const netResp = await fetch(event.request);
-                if (netResp && netResp.ok) {
+                if (netResp && (netResp.ok || netResp.type === 'opaque')) {
                     imgCache.put(event.request, netResp.clone());
                     return netResp;
                 }
+                if (netResp) return netResp;
             } catch (e) {}
 
             return cached;

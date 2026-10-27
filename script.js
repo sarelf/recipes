@@ -5,13 +5,13 @@ let currentScale = 1;
 const RECIPES_STORAGE_KEY = 'cached_recipes_data_v2';
 
 const CATEGORIES = [
-    { title: "סלטים", tag: "סלט", image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80", gradient: "linear-gradient(135deg, #059669 0%, #065f46 100%)" },
-    { title: "עוגות וקינוחים", tag: "עוגה", image: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=800&q=80", gradient: "linear-gradient(135deg, #d97706 0%, #b45309 100%)" },
+    { title: "סלטים", tag: "סלט", image: "images/cat_salads.jpg", gradient: "linear-gradient(135deg, #059669 0%, #065f46 100%)" },
+    { title: "עוגות וקינוחים", tag: "עוגה", image: "images/cat_cakes.jpg", gradient: "linear-gradient(135deg, #d97706 0%, #b45309 100%)" },
     { title: "דגים", tag: "דגים", image: "images/ai_fish_dish.jpg", gradient: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)" },
-    { title: "לחמים ומאפים", tag: "לחם", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&q=80", gradient: "linear-gradient(135deg, #b45309 0%, #78350f 100%)" },
-    { title: "תבשילים ועיקריות", tag: "תבשיל", image: "https://images.unsplash.com/photo-1547592180-85f173990554?w=800&q=80", gradient: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)" },
-    { title: "חטיפים ותוספות", tag: "חטיף", image: "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=800&q=80", gradient: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" },
-    { title: "כל המתכונים", tag: "all", image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80", gradient: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)" }
+    { title: "לחמים ומאפים", tag: "לחם", image: "images/cat_breads.jpg", gradient: "linear-gradient(135deg, #b45309 0%, #78350f 100%)" },
+    { title: "תבשילים ועיקריות", tag: "תבשיל", image: "images/cat_mains.jpg", gradient: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)" },
+    { title: "חטיפים ותוספות", tag: "חטיף", image: "images/cat_snacks.jpg", gradient: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" },
+    { title: "כל המתכונים", tag: "all", image: "images/cat_all.jpg", gradient: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)" }
 ];
 
 // Register Service Worker immediately for offline PWA functionality
