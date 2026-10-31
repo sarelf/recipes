@@ -413,6 +413,21 @@ function showToast(msg, duration = 2500) {
     }, duration);
 }
 
+function matchesCategory(recipe, cat) {
+    if (!cat || cat.tag === 'all') return true;
+    if (!recipe || !recipe.tags || !Array.isArray(recipe.tags)) return false;
+    const catTag = cat.tag.toLowerCase();
+    const catTitle = (cat.title || '').toLowerCase();
+    return recipe.tags.some(rawTag => {
+        const t = (rawTag || '').toLowerCase();
+        return t === catTag || 
+               t.includes(catTag) || 
+               catTag.includes(t) ||
+               t.includes(catTitle) || 
+               catTitle.includes(t);
+    });
+}
+
 function refreshCurrentView() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput && searchInput.value.trim()) {
@@ -426,7 +441,7 @@ function refreshCurrentView() {
         const currentCat = CATEGORIES.find(c => c.title === title);
         let filtered = allRecipes;
         if (currentCat && currentCat.tag !== 'all') {
-            filtered = allRecipes.filter(r => r.tags && r.tags.includes(currentCat.tag));
+            filtered = allRecipes.filter(r => matchesCategory(r, currentCat));
         }
         renderGrid(filtered, title);
     } else {
@@ -522,7 +537,7 @@ function renderCategories() {
         card.addEventListener('click', () => {
             let filtered = allRecipes;
             if (cat.tag !== 'all') {
-                filtered = allRecipes.filter(r => r.tags && r.tags.includes(cat.tag));
+                filtered = allRecipes.filter(r => matchesCategory(r, cat));
             }
             renderGrid(filtered, cat.title);
         });
