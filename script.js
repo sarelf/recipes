@@ -109,6 +109,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('backToCategoriesBtn').addEventListener('click', showCategories);
 
+    // Refresh button handler
+    const refreshBtn = document.getElementById('refreshRecipesBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            const icon = refreshBtn.querySelector('.refresh-icon');
+            if (icon) icon.classList.add('spinning');
+            refreshBtn.disabled = true;
+
+            try {
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistration().then(reg => {
+                        if (reg) reg.update().catch(() => {});
+                    }).catch(() => {});
+                }
+                await fetchRecipes(true);
+                showToast(`✓ המתכונים עודכנו (${allRecipes.length} מתכונים)`);
+            } catch (err) {
+                console.warn('Manual refresh error:', err);
+                showToast('⚠️ לא ניתן לרענן כרגע (בדוק חיבור לרשת)');
+            } finally {
+                setTimeout(() => {
+                    if (icon) icon.classList.remove('spinning');
+                    refreshBtn.disabled = false;
+                }, 400);
+            }
+        });
+    }
+
     // Modal Close and Navigation Handlers
     let isHistoryNavigating = false;
 
@@ -374,14 +402,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-async function fetchRecipes() {
+function showToast(msg, duration = 2500) {
+    const toast = document.getElementById('toastMessage');
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.style.display = 'flex';
+    if (window._toastTimer) clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => {
+        toast.style.display = 'none';
+    }, duration);
+}
+
+function refreshCurrentView() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && searchInput.value.trim()) {
+        searchInput.dispatchEvent(new Event('input'));
+        return;
+    }
+    const recipeGrid = document.getElementById('recipeGrid');
+    if (recipeGrid && recipeGrid.style.display === 'grid' && allRecipes.length > 0) {
+        const titleEl = document.getElementById('currentCategoryTitle');
+        const title = titleEl ? titleEl.textContent : "כל המתכונים";
+        const currentCat = CATEGORIES.find(c => c.title === title);
+        let filtered = allRecipes;
+        if (currentCat && currentCat.tag !== 'all') {
+            filtered = allRecipes.filter(r => r.tags && r.tags.includes(currentCat.tag));
+        }
+        renderGrid(filtered, title);
+    } else {
+        showCategories();
+    }
+}
+
+async function fetchRecipes(isManual = false) {
     let freshData = null;
     const isLocalBackend = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const apiUrl = isLocalBackend ? '/api/recipes' : `recipes.json?v=${Date.now()}`;
+    const apiUrl = isLocalBackend ? (isManual ? `/api/recipes?t=${Date.now()}` : '/api/recipes') : `recipes.json?v=${Date.now()}`;
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const timeoutId = setTimeout(() => controller.abort(), isManual ? 4500 : 3500);
         const res = await fetch(apiUrl, { signal: controller.signal, cache: 'no-store' });
         clearTimeout(timeoutId);
 
@@ -395,6 +455,7 @@ async function fetchRecipes() {
                 } catch (e) {}
                 setOfflineMode(false);
                 precacheAllRecipeImages(freshData);
+                refreshCurrentView();
                 return;
             }
         }
@@ -404,7 +465,9 @@ async function fetchRecipes() {
         if (allRecipes.length === 0) {
             loadCachedRecipesSync();
         }
+        if (isManual) throw err;
     }
+    refreshCurrentView();
 }
 
 async function precacheAllRecipeImages(recipes) {

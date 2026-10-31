@@ -623,3 +623,85 @@ body {
     gap: 0.4rem;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
+
+/* Refresh Button */
+.refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-family: 'Assistant', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.refresh-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.refresh-btn:active {
+    transform: scale(0.96);
+    background: rgba(59, 130, 246, 0.25);
+}
+
+.refresh-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.refresh-icon.spinning {
+    animation: spinRefresh 0.8s linear infinite;
+}
+
+@keyframes spinRefresh {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Toast Notification */
+.toast-message {
+    position: fixed;
+    top: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.94);
+    color: #f8fafc;
+    border: 1px solid rgba(59, 130, 246, 0.6);
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
+    padding: 0.65rem 1.4rem;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-family: 'Assistant', sans-serif;
+    font-weight: 600;
+    z-index: 10000;
+    backdrop-filter: blur(16px);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: toastSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toastSlideDown {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}

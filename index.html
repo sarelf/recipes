@@ -19,12 +19,18 @@
         <header class="header">
             <div class="header-brand" style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
                 <h1 style="margin: 0;">המתכונים שלי</h1>
+                <button type="button" id="refreshRecipesBtn" class="refresh-btn" title="רענן מתכונים" aria-label="רענן מתכונים">
+                    <span class="refresh-icon">🔄</span>
+                    <span class="refresh-text">רענן</span>
+                </button>
                 <span id="offlineStatusBadge" class="offline-badge" style="display: none;">📡 מצב אופליין (נתונים שמורים)</span>
             </div>
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="חפש מתכונים...">
             </div>
         </header>
+
+        <div id="toastMessage" class="toast-message" style="display: none;"></div>
 
         <main class="main-content">
             <div id="categoryGrid" class="category-grid">
