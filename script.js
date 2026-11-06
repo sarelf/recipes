@@ -420,6 +420,7 @@ function matchesCategory(recipe, cat) {
     const catTitle = (cat.title || '').toLowerCase();
     return recipe.tags.some(rawTag => {
         const t = (rawTag || '').toLowerCase();
+        if (catTag === 'חטיף' && (t === 'תוספת' || t === 'תוספות' || t.startsWith('תוספ'))) return true;
         return t === catTag || 
                t.includes(catTag) || 
                catTag.includes(t) ||
