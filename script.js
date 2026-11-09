@@ -5,28 +5,21 @@ let currentScale = 1;
 const RECIPES_STORAGE_KEY = 'cached_recipes_data_v2';
 
 const CATEGORIES = [
-    { title: "סלטים", tag: "סלט", image: "images/cat_salads.jpg", gradient: "linear-gradient(135deg, #059669 0%, #065f46 100%)" },
-    { title: "עוגות וקינוחים", tag: "עוגה", image: "images/cat_cakes.jpg", gradient: "linear-gradient(135deg, #d97706 0%, #b45309 100%)" },
+    { title: "סלטים", tag: "סלט", image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80", gradient: "linear-gradient(135deg, #059669 0%, #065f46 100%)" },
+    { title: "עוגות וקינוחים", tag: "עוגה", image: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=800&q=80", gradient: "linear-gradient(135deg, #d97706 0%, #b45309 100%)" },
     { title: "דגים", tag: "דגים", image: "images/ai_fish_dish.jpg", gradient: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)" },
-    { title: "לחמים ומאפים", tag: "לחם", image: "images/cat_breads.jpg", gradient: "linear-gradient(135deg, #b45309 0%, #78350f 100%)" },
-    { title: "תבשילים ועיקריות", tag: "תבשיל", image: "images/cat_mains.jpg", gradient: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)" },
-    { title: "חטיפים ותוספות", tag: "חטיף", image: "images/cat_snacks.jpg", gradient: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" },
-    { title: "כל המתכונים", tag: "all", image: "images/cat_all.jpg", gradient: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)" }
+    { title: "לחמים ומאפים", tag: "לחם", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&q=80", gradient: "linear-gradient(135deg, #b45309 0%, #78350f 100%)" },
+    { title: "תבשילים ועיקריות", tag: "תבשיל", image: "https://images.unsplash.com/photo-1547592180-85f173990554?w=800&q=80", gradient: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)" },
+    { title: "חטיפים ותוספות", tag: "חטיף", image: "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=800&q=80", gradient: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" },
+    { title: "כל המתכונים", tag: "all", image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80", gradient: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)" }
 ];
 
 // Register Service Worker immediately for offline PWA functionality
 if ('serviceWorker' in navigator) {
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-            refreshing = true;
-            window.location.reload();
-        }
-    });
-
     navigator.serviceWorker.register('sw.js')
         .then(reg => {
             console.log('ServiceWorker registered with scope:', reg.scope);
+            // Check for updates
             reg.update().catch(() => {});
         })
         .catch(err => {
@@ -51,20 +44,6 @@ window.addEventListener('offline', () => {
 });
 
 function loadCachedRecipesSync() {
-    // 1. Try embedded inline data in HTML (fastest, guaranteed 100% offline availability)
-    try {
-        const inlineEl = document.getElementById('initialRecipesData');
-        if (inlineEl && inlineEl.textContent.trim()) {
-            const parsed = JSON.parse(inlineEl.textContent);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                allRecipes = parsed;
-            }
-        }
-    } catch (e) {
-        console.warn('Error reading inline recipes:', e);
-    }
-
-    // 2. Try localStorage (which may have newer edits or user notes)
     try {
         const localData = localStorage.getItem(RECIPES_STORAGE_KEY);
         if (localData) {
@@ -77,7 +56,7 @@ function loadCachedRecipesSync() {
     } catch (e) {
         console.warn('Error reading cached recipes from localStorage:', e);
     }
-    return allRecipes.length > 0;
+    return false;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -109,128 +88,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('backToCategoriesBtn').addEventListener('click', showCategories);
 
-    // Refresh button handler
-    const refreshBtn = document.getElementById('refreshRecipesBtn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-            const icon = refreshBtn.querySelector('.refresh-icon');
-            if (icon) icon.classList.add('spinning');
-            refreshBtn.disabled = true;
-
-            try {
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistration().then(reg => {
-                        if (reg) reg.update().catch(() => {});
-                    }).catch(() => {});
-                }
-                await fetchRecipes(true);
-                showToast(`✓ המתכונים עודכנו (${allRecipes.length} מתכונים)`);
-            } catch (err) {
-                console.warn('Manual refresh error:', err);
-                showToast('⚠️ לא ניתן לרענן כרגע (בדוק חיבור לרשת)');
-            } finally {
-                setTimeout(() => {
-                    if (icon) icon.classList.remove('spinning');
-                    refreshBtn.disabled = false;
-                }, 400);
-            }
-        });
-    }
-
-    // Modal Close and Navigation Handlers
-    let isHistoryNavigating = false;
-
-    window.addEventListener('popstate', () => {
-        isHistoryNavigating = true;
-        const recipeModal = document.getElementById('recipeModal');
-        if (recipeModal) recipeModal.style.display = 'none';
-        const addModal = document.getElementById('addRecipeModal');
-        if (addModal) addModal.style.display = 'none';
-        setTimeout(() => { isHistoryNavigating = false; }, 50);
+    // Modals
+    document.getElementById('closeModal').addEventListener('click', () => {
+        document.getElementById('recipeModal').style.display = 'none';
     });
-
-    window.closeRecipeModal = function() {
-        const modal = document.getElementById('recipeModal');
-        if (modal) {
-            modal.style.display = 'none';
-            if (!isHistoryNavigating && window.history.state && window.history.state.modal === 'recipe') {
-                window.history.back();
-            }
-        }
-    };
-
-    window.closeAddModal = function() {
-        const modal = document.getElementById('addRecipeModal');
-        if (modal) {
-            modal.style.display = 'none';
-            if (!isHistoryNavigating && window.history.state && window.history.state.modal === 'add') {
-                window.history.back();
-            }
-        }
-    };
-
-    function setupModalClose(modalId, triggerIds, closeFn) {
-        const modal = document.getElementById(modalId);
-        if (!modal) return;
-
-        // Triggers (buttons, labels, footer buttons)
-        triggerIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            
-            const handleClose = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                closeFn();
-            };
-
-            el.addEventListener('click', handleClose);
-            el.addEventListener('touchend', handleClose, { passive: false });
-        });
-
-        // Backdrop click & tap for iOS and desktop
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeFn();
-            }
-        });
-
-        let touchStartY = 0;
-        modal.addEventListener('touchstart', (e) => {
-            if (e.target === modal && e.touches.length > 0) {
-                touchStartY = e.touches[0].clientY;
-            }
-        }, { passive: true });
-
-        modal.addEventListener('touchend', (e) => {
-            if (e.target === modal && e.changedTouches.length > 0) {
-                const diffY = Math.abs(e.changedTouches[0].clientY - touchStartY);
-                if (diffY < 15) {
-                    e.preventDefault();
-                    closeFn();
-                }
-            }
-        }, { passive: false });
-    }
-
-    setupModalClose('recipeModal', ['closeModal', 'closeModalGroup', 'closeModalText', 'closeModalFooterBtn'], window.closeRecipeModal);
-    setupModalClose('addRecipeModal', ['closeAddModal', 'closeAddModalGroup', 'closeAddModalText'], window.closeAddModal);
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            window.closeRecipeModal();
-            window.closeAddModal();
-        }
+    
+    document.getElementById('closeAddModal').addEventListener('click', () => {
+        document.getElementById('addRecipeModal').style.display = 'none';
     });
-
+    
     document.getElementById('floatingAddBtn').addEventListener('click', () => {
-        const modal = document.getElementById('addRecipeModal');
-        modal.style.display = 'block';
-        const modalContent = modal.querySelector('.modal-content');
-        if (modalContent) modalContent.scrollTop = 0;
-        try {
-            window.history.pushState({ modal: 'add' }, '');
-        } catch (e) {}
+        document.getElementById('addRecipeModal').style.display = 'block';
     });
 
     document.getElementById('addNoteBtn').addEventListener('click', async () => {
@@ -246,6 +114,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const updatedNotes = [...(currentRecipe.notes || []), newNote];
         await updateNotes(updatedNotes);
         textEl.value = '';
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === document.getElementById('recipeModal')) {
+            document.getElementById('recipeModal').style.display = 'none';
+        }
+        if (e.target === document.getElementById('addRecipeModal')) {
+            document.getElementById('addRecipeModal').style.display = 'none';
+        }
     });
 
     // Add Ingredient Row
@@ -290,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'DELETE'
                 });
                 if (res.ok) {
-                    window.closeRecipeModal();
+                    document.getElementById('recipeModal').style.display = 'none';
                     fetchRecipes();
                 } else {
                     alert('שגיאה במחיקת המתכון.');
@@ -347,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (res.ok) {
-                window.closeAddModal();
+                document.getElementById('addRecipeModal').style.display = 'none';
                 document.getElementById('addRecipeForm').reset();
                 fetchRecipes();
             } else {
@@ -385,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (res.ok) {
-                window.closeAddModal();
+                document.getElementById('addRecipeModal').style.display = 'none';
                 document.getElementById('importUrlForm').reset();
                 fetchRecipes();
             } else {
@@ -401,54 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
-function showToast(msg, duration = 2500) {
-    const toast = document.getElementById('toastMessage');
-    if (!toast) return;
-    toast.textContent = msg;
-    toast.style.display = 'flex';
-    if (window._toastTimer) clearTimeout(window._toastTimer);
-    window._toastTimer = setTimeout(() => {
-        toast.style.display = 'none';
-    }, duration);
-}
-
-function matchesCategory(recipe, cat) {
-    if (!cat || cat.tag === 'all') return true;
-    if (!recipe || !recipe.tags || !Array.isArray(recipe.tags)) return false;
-    const catTag = cat.tag.toLowerCase();
-    const catTitle = (cat.title || '').toLowerCase();
-    return recipe.tags.some(rawTag => {
-        const t = (rawTag || '').toLowerCase();
-        if (catTag === 'חטיף' && (t === 'תוספת' || t === 'תוספות' || t.startsWith('תוספ'))) return true;
-        return t === catTag || 
-               t.includes(catTag) || 
-               catTag.includes(t) ||
-               t.includes(catTitle) || 
-               catTitle.includes(t);
-    });
-}
-
-function refreshCurrentView() {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput && searchInput.value.trim()) {
-        searchInput.dispatchEvent(new Event('input'));
-        return;
-    }
-    const recipeGrid = document.getElementById('recipeGrid');
-    if (recipeGrid && recipeGrid.style.display === 'grid' && allRecipes.length > 0) {
-        const titleEl = document.getElementById('currentCategoryTitle');
-        const title = titleEl ? titleEl.textContent : "כל המתכונים";
-        const currentCat = CATEGORIES.find(c => c.title === title);
-        let filtered = allRecipes;
-        if (currentCat && currentCat.tag !== 'all') {
-            filtered = allRecipes.filter(r => matchesCategory(r, currentCat));
-        }
-        renderGrid(filtered, title);
-    } else {
-        showCategories();
-    }
-}
 
 async function fetchRecipes(isManual = false) {
     let freshData = null;
@@ -489,7 +318,7 @@ async function fetchRecipes(isManual = false) {
 async function precacheAllRecipeImages(recipes) {
     if (!('caches' in window)) return;
     try {
-        const cache = await caches.open('recipes-images-v9');
+        const cache = await caches.open('recipes-images-v6');
         const imageUrls = new Set();
         CATEGORIES.forEach(c => {
             if (c.image) imageUrls.add(c.image);
@@ -538,7 +367,7 @@ function renderCategories() {
         card.addEventListener('click', () => {
             let filtered = allRecipes;
             if (cat.tag !== 'all') {
-                filtered = allRecipes.filter(r => matchesCategory(r, cat));
+                filtered = allRecipes.filter(r => r.tags && r.tags.includes(cat.tag));
             }
             renderGrid(filtered, cat.title);
         });
@@ -639,13 +468,7 @@ function openRecipe(recipe) {
     renderIngredients();
     renderNotes();
     
-    const recipeModal = document.getElementById('recipeModal');
-    recipeModal.style.display = 'block';
-    const modalContent = recipeModal.querySelector('.modal-content');
-    if (modalContent) modalContent.scrollTop = 0;
-    try {
-        window.history.pushState({ modal: 'recipe' }, '');
-    } catch (e) {}
+    document.getElementById('recipeModal').style.display = 'block';
 }
 
 function renderScaler() {
