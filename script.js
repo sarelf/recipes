@@ -366,6 +366,13 @@ async function fetchRecipes(isManual = false) {
     refreshCurrentView();
 }
 
+function resolveRecipeImageUrl(img) {
+    if (!img) return '';
+    if (img.startsWith('http://') || img.startsWith('https://')) return img;
+    const clean = img.replace(/^\.?\/?(images\/)+/, '');
+    return 'images/' + clean;
+}
+
 async function precacheAllRecipeImages(recipes) {
     if (!('caches' in window)) return;
     try {
@@ -376,8 +383,8 @@ async function precacheAllRecipeImages(recipes) {
         });
         recipes.forEach(r => {
             if (r.image) {
-                const imgUrl = r.image.startsWith('http') ? r.image : `images/${r.image}`;
-                imageUrls.add(imgUrl);
+                const imgUrl = resolveRecipeImageUrl(r.image);
+                if (imgUrl) imageUrls.add(imgUrl);
             }
         });
 
@@ -475,8 +482,9 @@ function renderGrid(recipes, title = "כל המתכונים") {
         const card = document.createElement('div');
         card.className = 'recipe-card';
         
-        const imgHtml = recipe.image ? 
-            `<img src="${recipe.image.startsWith('http') ? recipe.image : 'images/' + recipe.image}" style="width:100%; height:150px; object-fit:cover; border-radius:0.5rem; margin-bottom:1rem;" onerror="this.style.display='none'">` 
+        const imgUrl = resolveRecipeImageUrl(recipe.image);
+        const imgHtml = imgUrl ? 
+            `<img src="${imgUrl}" style="width:100%; height:150px; object-fit:cover; border-radius:0.5rem; margin-bottom:1rem;" onerror="this.style.display='none'">` 
             : '';
             
         const tagsHtml = recipe.tags ? recipe.tags.map(t => `<span class="tag">${t}</span>`).join('') : '';
@@ -501,8 +509,9 @@ function openRecipe(recipe) {
     document.getElementById('modalTitle').textContent = recipe.title;
     
     const imgEl = document.getElementById('modalImage');
-    if (recipe.image) {
-        imgEl.src = recipe.image.startsWith('http') ? recipe.image : 'images/' + recipe.image;
+    const modalImgUrl = resolveRecipeImageUrl(recipe.image);
+    if (modalImgUrl) {
+        imgEl.src = modalImgUrl;
         imgEl.style.display = 'block';
         imgEl.onerror = () => { imgEl.style.display = 'none'; };
     } else {
@@ -568,21 +577,28 @@ function renderIngredients() {
     const list = document.getElementById('modalIngredients');
     list.innerHTML = '';
     
-    if (!currentRecipe.ingredients) return;
+    if (!currentRecipe || !currentRecipe.ingredients) return;
     
-    const ratio = currentScale;
+    const ratio = currentScale || 1;
     
     currentRecipe.ingredients.forEach(ing => {
         const li = document.createElement('li');
-        let text = ing.item;
+        let text = '';
         
-        if (ing.quantity) {
-            const scaledQty = (ing.quantity * ratio);
-            const formattedQty = Number.isInteger(scaledQty) ? scaledQty : parseFloat(scaledQty.toFixed(2));
-            const unitText = ing.unit ? ` ${ing.unit}` : '';
-            text = `<span>${formattedQty}${unitText}</span> <span>${text}</span>`;
-        } else {
-            text = `<span></span> <span>${text}</span>`;
+        if (typeof ing === 'string') {
+            text = `<span></span> <span>${ing}</span>`;
+        } else if (ing && typeof ing === 'object') {
+            const itemName = ing.item || '';
+            const qty = (ing.quantity != null && ing.quantity !== '' && !isNaN(ing.quantity)) ? parseFloat(ing.quantity) : null;
+            if (qty !== null) {
+                const scaledQty = (qty * ratio);
+                const formattedQty = Number.isInteger(scaledQty) ? scaledQty : parseFloat(scaledQty.toFixed(2));
+                const unitText = ing.unit ? ` ${ing.unit}` : '';
+                text = `<span>${formattedQty}${unitText}</span> <span>${itemName}</span>`;
+            } else {
+                const unitText = ing.unit ? `<span>${ing.unit}</span> ` : '<span></span> ';
+                text = `${unitText}<span>${itemName}</span>`;
+            }
         }
         
         li.innerHTML = text;
