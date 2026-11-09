@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1794236481';
+const CACHE_VERSION = 'v1794238190';
 const STATIC_CACHE = `recipes-static-${CACHE_VERSION}`;
 const DATA_CACHE = `recipes-data-${CACHE_VERSION}`;
 const IMAGES_CACHE = `recipes-images-${CACHE_VERSION}`;
@@ -19,7 +19,6 @@ const STATIC_ASSETS = [
     BASE + 'index.html',
     BASE + 'style.css',
     BASE + 'script.js',
-    BASE + 'recipes.json',
     BASE + 'marked.min.js',
     BASE + 'manifest.json',
     BASE + 'icons/icon-192x192.png',
@@ -58,6 +57,10 @@ self.addEventListener('activate', (event) => {
             })
         );
         await self.clients.claim();
+        const clients = await self.clients.matchAll({ type: 'window' });
+        for (const client of clients) {
+            client.postMessage({ type: 'SW_ACTIVATED' });
+        }
     })());
 });
 
@@ -98,22 +101,31 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 2. Data / recipes.json -> Stale-while-revalidate
+    // 2. Data / recipes.json -> Network-First (with immediate cache fallback for offline)
     if (url.pathname.endsWith('recipes.json') || url.pathname.endsWith('/api/recipes')) {
         event.respondWith((async () => {
             const dataCache = await caches.open(DATA_CACHE);
-            const cached = await dataCache.match(event.request) ||
-                           await caches.match(BASE + 'recipes.json');
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2500);
+                const netResp = await fetch(event.request, { signal: controller.signal, cache: 'no-store' });
+                clearTimeout(timeoutId);
 
-            const fetchPromise = fetch(event.request).then(async (netResp) => {
                 if (netResp && netResp.ok) {
                     await dataCache.put(event.request, netResp.clone());
                     await dataCache.put(BASE + 'recipes.json', netResp.clone());
+                    return netResp;
                 }
-                return netResp;
-            }).catch(() => null);
+            } catch (netErr) {
+                console.warn('Network-first fetch failed, falling back to cache:', netErr);
+            }
 
-            return cached || (await fetchPromise);
+            const cached = await dataCache.match(event.request) ||
+                           await dataCache.match(BASE + 'recipes.json') ||
+                           await caches.match(BASE + 'recipes.json');
+            if (cached) return cached;
+
+            return new Response('[]', { headers: { 'Content-Type': 'application/json' } });
         })());
         return;
     }

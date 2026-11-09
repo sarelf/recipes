@@ -2,7 +2,7 @@ let allRecipes = [];
 let currentRecipe = null;
 let currentScale = 1;
 
-const RECIPES_STORAGE_KEY = 'cached_recipes_data_v2';
+const RECIPES_STORAGE_KEY = 'cached_recipes_data_v3';
 
 const CATEGORIES = [
     { title: "סלטים", tag: "סלט", image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80", gradient: "linear-gradient(135deg, #059669 0%, #065f46 100%)" },
@@ -19,12 +19,18 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js')
         .then(reg => {
             console.log('ServiceWorker registered with scope:', reg.scope);
-            // Check for updates
             reg.update().catch(() => {});
         })
         .catch(err => {
             console.warn('ServiceWorker registration error:', err);
         });
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SW_ACTIVATED') {
+            console.log('SW updated, fetching fresh recipes...');
+            fetchRecipes(true);
+        }
+    });
 }
 
 function setOfflineMode(isOffline) {
@@ -53,8 +59,16 @@ function loadCachedRecipesSync() {
                 return true;
             }
         }
+        const inlineEl = document.getElementById('initialRecipesData');
+        if (inlineEl && inlineEl.textContent.trim()) {
+            const parsed = JSON.parse(inlineEl.textContent);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                allRecipes = parsed;
+                return true;
+            }
+        }
     } catch (e) {
-        console.warn('Error reading cached recipes from localStorage:', e);
+        console.warn('Error reading cached recipes:', e);
     }
     return false;
 }
@@ -71,6 +85,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Fetch fresh data in background (with multi-tier offline fallback)
     fetchRecipes();
+
+    // 4. Refresh button handler
+    const refreshBtn = document.getElementById('refreshRecipesBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            const icon = refreshBtn.querySelector('.refresh-icon');
+            if (icon) {
+                icon.style.transition = 'transform 0.6s ease';
+                icon.style.transform = 'rotate(360deg)';
+            }
+            try {
+                localStorage.removeItem(RECIPES_STORAGE_KEY);
+                await fetchRecipes(true);
+            } finally {
+                setTimeout(() => {
+                    if (icon) {
+                        icon.style.transition = 'none';
+                        icon.style.transform = 'none';
+                    }
+                }, 600);
+            }
+        });
+    }
 
     // Search input handler
     document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -279,6 +316,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+function refreshCurrentView() {
+    const recipeGrid = document.getElementById('recipeGrid');
+    if (recipeGrid && recipeGrid.style.display === 'grid' && allRecipes.length > 0) {
+        const titleEl = document.getElementById('currentCategoryTitle');
+        const currentText = titleEl ? titleEl.textContent : "";
+        const currentCat = CATEGORIES.find(c => currentText.startsWith(c.title));
+        let filtered = allRecipes;
+        if (currentCat && currentCat.tag !== 'all') {
+            filtered = allRecipes.filter(r => r.tags && r.tags.includes(currentCat.tag));
+        }
+        renderGrid(filtered, currentCat ? currentCat.title : "כל המתכונים");
+    }
+}
+
 async function fetchRecipes(isManual = false) {
     let freshData = null;
     const isLocalBackend = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -286,7 +337,7 @@ async function fetchRecipes(isManual = false) {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), isManual ? 4500 : 3500);
+        const timeoutId = setTimeout(() => controller.abort(), isManual ? 5000 : 3500);
         const res = await fetch(apiUrl, { signal: controller.signal, cache: 'no-store' });
         clearTimeout(timeoutId);
 
@@ -375,11 +426,25 @@ function renderCategories() {
     });
 }
 
+function refreshCurrentView() {
+    const recipeGrid = document.getElementById('recipeGrid');
+    if (recipeGrid && recipeGrid.style.display === 'grid' && allRecipes.length > 0) {
+        const titleEl = document.getElementById('currentCategoryTitle');
+        const currentText = titleEl ? titleEl.textContent : "";
+        const currentCat = CATEGORIES.find(c => currentText.startsWith(c.title));
+        let filtered = allRecipes;
+        if (currentCat && currentCat.tag !== 'all') {
+            filtered = allRecipes.filter(r => r.tags && r.tags.includes(currentCat.tag));
+        }
+        renderGrid(filtered, currentCat ? currentCat.title : "כל המתכונים");
+    }
+}
+
 function renderGrid(recipes, title = "כל המתכונים") {
     document.getElementById('categoryGrid').style.display = 'none';
     document.getElementById('recipeViewHeader').style.display = 'flex';
     document.getElementById('recipeGrid').style.display = 'grid';
-    document.getElementById('currentCategoryTitle').textContent = title;
+    document.getElementById('currentCategoryTitle').textContent = `${title} (${recipes ? recipes.length : 0})`;
 
     const grid = document.getElementById('recipeGrid');
     grid.innerHTML = '';
