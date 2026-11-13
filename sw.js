@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1794290089';
+const CACHE_VERSION = 'v1794562486';
 const STATIC_CACHE = `recipes-static-${CACHE_VERSION}`;
 const DATA_CACHE = `recipes-data-${CACHE_VERSION}`;
 const IMAGES_CACHE = `recipes-images-${CACHE_VERSION}`;
